@@ -1,56 +1,47 @@
-import './App.css';
-import { useState, Suspense, useRef } from 'react'
-import { BrowserRouter as Router, Route } from 'react-router-dom'
-import ArtistView from './components/ArtistView'
-import AlbumView from './components/AlbumView'
-import Gallery from './components/Gallery'
-import SearchBar from './components/SearchBar'
-import Spinner from './components/Spinner'
-import { DataContext } from './context/DataContext'
-import { SearchContext } from './context/SearchContext'
-import { createResource as fetchData } from './helper'
+import { useEffect, useState } from 'react'
+import { useParams, useHistory } from 'react-router-dom'
+import Spinner from './Spinner'
 
-const App = () => {
-  let searchInput = useRef('')
-  let [data, setData] = useState(null)
-  let [message, setMessage] = useState('Search for Music!')
+const AlbumView = () => {
+    const { id } = useParams()
+    const history = useHistory()
+    const [ albumData, setAlbumData ] = useState([])
 
-  const handleSearch = (e, term) => {
-    e.preventDefault()
-    setData(fetchData(term, 'main'))
-  }
+    useEffect(() => {
+        const API_URL = `http://localhost:4000/song/${id}`
+        const fetchData = async () => {
+            const response = await fetch(API_URL)
+            const resData = await response.json()
+            setAlbumData(resData.results)
+        }
+        fetchData()
+    }, [id])
 
-  const renderGallery = () => {
-    if(data) {
-      return (
-        <Suspense fallback={<Spinner />}>
-          <Gallery />
-        </Suspense>
-      )
+    const navButtons = () => {
+        return (
+            <div>
+                <button onClick={() => {history.push('/')}}>Home</button> |
+                <button onClick={() => {history.goBack()}}>Back</button>
+            </div>
+        )
     }
-  }
 
-  return (
-    <div className="App">
-      {message}
-      <Router>
-        <Route exact path={'/'}>
-          <SearchContext.Provider value={{term: searchInput, handleSearch: handleSearch}}>
-            <SearchBar />
-          </SearchContext.Provider>
-            <DataContext.Provider value={data}>
-              {renderGallery()}
-            </DataContext.Provider>
-        </Route>
-        <Route path="/album/:id">
-          <AlbumView />
-        </Route>
-        <Route path="/artist/:id">
-          <ArtistView />
-        </Route>
-      </Router>
-    </div>
-  );
+    const allSongs = albumData.filter(entity => entity.kind === 'song')
+    .map((album, i) => {
+        return (
+            <div key={i}>
+                {album.trackName}
+            </div>
+        )
+    })
+
+    return (
+        <div>
+            {albumData.length > 0 ? <h2>{albumData[0].collectionName}</h2> : <Spinner />}
+            {navButtons()}
+            {allSongs}
+        </div>
+    )
 }
 
-export default App;
+export default AlbumView
